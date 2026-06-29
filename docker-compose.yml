@@ -1,0 +1,55 @@
+# ═══════════════════════════════════════════════════════════════
+#  RVCE Todo App & Jenkins — Docker Compose Configuration
+# ═══════════════════════════════════════════════════════════════
+#
+#  Usage:
+#    docker compose up -d        # Start App and Jenkins
+#    docker compose down         # Stop all services
+#
+# ═══════════════════════════════════════════════════════════════
+
+version: "3.8"
+
+services:
+  # ── Todo Application ──────────────────────────────────────
+  todo-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rvce-todo-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.example
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - todo-network
+
+  # ── Jenkins CI/CD Server ──────────────────────────────────
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins-lab
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+    restart: unless-stopped
+    networks:
+      - todo-network
+
+networks:
+  todo-network:
+    driver: bridge
+
+volumes:
+  jenkins-data:
